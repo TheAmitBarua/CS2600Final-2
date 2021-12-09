@@ -1,9 +1,6 @@
-/*** includes ***/
-
 #define _DEFAULT_SOURCE
 #define _BSD_SOURCE
 #define _GNU_SOURCE
-
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -16,9 +13,6 @@
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
-
-/*** defines ***/
-
 #define KILO_VERSION "0.0.1"
 #define KILO_TAB_STOP 8
 #define KILO_QUIT_TIMES 3
@@ -52,7 +46,7 @@ enum editorHighlight {
 #define HL_HIGHLIGHT_NUMBERS (1<<0)
 #define HL_HIGHLIGHT_STRINGS (1<<1)
 
-/*** data ***/
+
 
 struct editorSyntax {
   char *file_type;
@@ -93,7 +87,7 @@ struct editorConfig {
 
 struct editorConfig E;
 
-/*** filetypes ***/
+
 
 char *C_HL_extensions[] = { ".c", ".h", ".cpp", NULL };
 char *C_HL_keywords[] = {
@@ -132,13 +126,13 @@ struct editorSyntax HLDB[] = {
 
 # define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
 
-/*** prototypes ***/
+
 
 void editorSetStatusMessage(const char *fmt, ...);
 void editorRefreshScreen();
 char *editorPrompt(char *prompt, void (*callback)(char *, int));
 
-/*** terminal ***/
+
 
 void die(const char *s) {
   write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -249,7 +243,6 @@ int getWindowSize(int *rows, int *cols) {
   }
 }
 
-/*** syntax highlighting ***/
 
 int is_separator(int c) {
   return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL;
@@ -409,14 +402,13 @@ void editorSelectSyntaxHighlight() {
   }
 }
 
-/*** row operations ***/
 
 int editorRowFilePositionXToScreenPositionX(erow *row, int file_position_x) {
   int screen_position_x = 0;
   int j;
   for (j = 0; j < file_position_x; j++) {
     if (row->characters[j] == '\t')
-      screen_position_x += (TEXOR_TAB_STOP - 1) - (screen_position_x % TEXOR_TAB_STOP);
+      screen_position_x += (KILO_TAB_STOP - 1) - (screen_position_x % KILO_TAB_STOP);
     screen_position_x++;
   }
   return screen_position_x;
@@ -427,7 +419,7 @@ int editorRowScreenPositionXToFilePositionX(erow *row, int screen_position_x) {
   int file_position_x;
   for (file_position_x = 0; file_position_x < row->size; file_position_x++) {
     if (row->characters[file_position_x] == '\t')
-      cur_screen_position_x += (TEXOR_TAB_STOP - 1) - (cur_screen_position_x % TEXOR_TAB_STOP);
+      cur_screen_position_x += (KILO_TAB_STOP - 1) - (cur_screen_position_x % KILO_TAB_STOP);
     cur_screen_position_x++;
 
     if (cur_screen_position_x > screen_position_x) return file_position_x;
@@ -442,13 +434,13 @@ void editorUpdateRow(erow *row) {
     if (row->characters[j] == '\t') tabs++;
 
   free(row->rendered_characters);
-  row->rendered_characters = malloc(row->size + tabs*(TEXOR_TAB_STOP - 1) + 1);
+  row->rendered_characters = malloc(row->size + tabs*(KILO_TAB_STOP - 1) + 1);
 
   int index = 0;
   for (j = 0; j < row->size; j++) {
     if (row->characters[j] == '\t') {
       row->rendered_characters[index++] = ' ';
-      while (index % TEXOR_TAB_STOP != 0) row->rendered_characters[index++] = ' ';
+      while (index % KILO_TAB_STOP != 0) row->rendered_characters[index++] = ' ';
     } else {
       row->rendered_characters[index++] = row->characters[j];
     }
@@ -516,7 +508,6 @@ void editorRowDelChar(erow *row, int at) {
   E.dirty++;
 }
 
-/*** editor operations ***/
 
 void editorInsertChar(int c) {
   if (E.file_position_y == E.number_of_rows) {
@@ -566,7 +557,6 @@ void editorDelChar() {
   }
 }
 
-/*** file i/o ***/
 
 char *editorRowsToString(int *buflen) {
   int totlen = 0;
@@ -641,7 +631,6 @@ void editorSave() {
   editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }
 
-/*** find **/
 
 void editorFindCallback(char *query, int key) {
   static int last_match = -1;
@@ -712,8 +701,6 @@ void editorFind() {
   }
 }
 
-/*** append buffer ***/
-
 struct abuf {
   char *b;
   int len;
@@ -735,7 +722,6 @@ void abFree(struct abuf *ab) {
   free(ab->b);
 }
 
-/*** output ***/
 
 void editorScroll() {
   E.screen_position_x = 0;
@@ -766,7 +752,7 @@ void editorDrawRows(struct abuf *ab) {
         char welcome[80];
 
         int welcomelen = snprintf(welcome, sizeof(welcome),
-            "Texor editor -- version %s", TEXOR_VERSION);
+            "KILO editor -- version %s", KILO_VERSION);
         if (welcomelen > E.screen_columns) welcomelen = E.screen_columns;
         int padding = (E.screen_columns - welcomelen) / 2;
         if (padding) {
@@ -885,7 +871,6 @@ void editorSetStatusMessage(const char *fmt, ...) {
   E.status_message_time = time(NULL);
 }
 
-/*** input ***/
 
 char *editorPrompt(char *prompt, void (*callback)(char *, int)) {
   size_t bufsize = 128;
@@ -1045,7 +1030,6 @@ void editorProcessKeypress() {
   quit_times = KILO_QUIT_TIMES;
 }
 
-/*** init ***/
 
 void initEditor() {
   E.file_position_x = 0;
